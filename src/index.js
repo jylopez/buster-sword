@@ -34,9 +34,6 @@ watcher.on('all', (event, filePath) => {
   logger.info(`RAW EVENT: ${event} → ${filePath}`);
 });
 
-watcher.on('add', handleFile);
-watcher.on('change', handleFile);
-
 const handleFile = async (filePath) => {
   const filename = path.basename(filePath);
   
