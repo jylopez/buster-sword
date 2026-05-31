@@ -31,9 +31,15 @@ const watcher = chokidar.watch(WATCH_PATH, {
 });
 
 watcher.on('add', async (filePath) => {
-  // Only process PDFs
-  if (path.extname(filePath).toLowerCase() !== '.pdf') {
-    logger.info(`Skipping non-PDF file: ${path.basename(filePath)}`);
+  const filename = path.basename(filePath);
+  
+  // Skip non-PDFs and Mac metadata files
+  if (
+    path.extname(filePath).toLowerCase() !== '.pdf' ||
+    filename.startsWith('._') ||
+    filename.startsWith('.')
+  ) {
+    logger.info(`Skipping: ${filename}`);
     return;
   }
 
