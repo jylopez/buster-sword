@@ -30,6 +30,10 @@ const watcher = chokidar.watch(WATCH_PATH, {
   depth: 0,                  // Only watch root of the drive, not subfolders
 });
 
+watcher.on('all', (event, filePath) => {
+  logger.info(`RAW EVENT: ${event} → ${filePath}`);
+});
+
 watcher.on('add', async (filePath) => {
   const filename = path.basename(filePath);
   
