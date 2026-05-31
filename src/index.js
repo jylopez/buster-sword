@@ -34,10 +34,12 @@ watcher.on('all', (event, filePath) => {
   logger.info(`RAW EVENT: ${event} → ${filePath}`);
 });
 
-watcher.on('add', async (filePath) => {
+watcher.on('add', handleFile);
+watcher.on('change', handleFile);
+
+const handleFile = async (filePath) => {
   const filename = path.basename(filePath);
   
-  // Skip non-PDFs and Mac metadata files
   if (
     path.extname(filePath).toLowerCase() !== '.pdf' ||
     filename.startsWith('._') ||
@@ -49,8 +51,7 @@ watcher.on('add', async (filePath) => {
 
   try {
     const result = await organizeFile(filePath, WATCH_PATH);
-
-    logger.info(`AI decision for "${path.basename(filePath)}":`);
+    logger.info(`AI decision for "${filename}":`);
     logger.info(`  → Folder: ${result.folder} ${result.isNewFolder ? '(new)' : '(existing)'}`);
     logger.info(`  → Rename: ${result.rename}`);
     logger.info(`  → Reason: ${result.reason}`);
@@ -62,10 +63,15 @@ watcher.on('add', async (filePath) => {
 
     const finalPath = moveFile(filePath, WATCH_PATH, result.folder, result.rename);
     logger.success(`Moved to: ${finalPath}`);
-
   } catch (err) {
-    logger.error(`Failed to organize ${path.basename(filePath)}`, err);
+    logger.error(`Failed to organize ${filename}`, err);
   }
+};
+
+watcher.on('add', handleFile);
+watcher.on('change', handleFile);
+watcher.on('all', (event, filePath) => {
+  logger.info(`RAW EVENT: ${event} → ${filePath}`);
 });
 
 watcher.on('error', (err) => logger.error('Watcher error', err));
