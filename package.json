@@ -9,7 +9,7 @@
     "dev": "node --watch src/index.js"
   },
   "dependencies": {
-    "@ai-sdk/openai": "^1.0.0",
+    "@ai-sdk/gateway": "^3.0.121",
     "ai": "^4.0.0",
     "chokidar": "^3.6.0",
     "dotenv": "^17.4.2",
