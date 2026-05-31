@@ -1,0 +1,19 @@
+{
+  "name": "buster-sword",
+  "version": "1.0.0",
+  "description": "AI-powered NAS document organizer",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js"
+  },
+  "dependencies": {
+    "@ai-sdk/openai": "^1.0.0",
+    "ai": "^4.0.0",
+    "chokidar": "^3.6.0",
+    "dotenv": "^17.4.2",
+    "pdf-parse": "^1.1.1",
+    "zod": "^3.23.0"
+  }
+}
