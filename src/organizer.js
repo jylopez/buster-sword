@@ -1,13 +1,12 @@
 import { generateObject } from 'ai';
-import { createOpenAI } from '@ai-sdk/openai';
+import { createGateway } from '@ai-sdk/gateway';
 import { z } from 'zod';
 import fs from 'fs';
 import path from 'path';
 import pdfParse from 'pdf-parse';
 import { logger } from './logger.js';
 
-const client = createOpenAI({
-  baseURL: 'https://ai-gateway.vercel.sh/v1/openai',
+const gateway = createGateway({
   apiKey: process.env.VERCEL_AI_GATEWAY_TOKEN,
 });
 
@@ -53,7 +52,7 @@ Rules:
 - If the content is unclear, use your best guess based on the filename`;
 
   const { object } = await generateObject({
-    model: client('gpt-4o-mini'),
+    model: gateway('anthropic/claude-haiku-4-5'),
     schema: z.object({
       folder: z.string().describe('Folder name to move the file into'),
       rename: z.string().describe('New filename including .pdf extension'),
