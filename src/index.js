@@ -1,7 +1,9 @@
 import chokidar from 'chokidar';
 import path from 'path';
+import fs from 'fs';
 import 'dotenv/config';
 import { organizeFile, moveFile } from './organizer.js';
+import { transcribeImage, isImageFile } from './transcriber.js';
 import { logger } from './logger.js';
 
 const WATCH_PATH = process.env.WATCH_PATH;
@@ -22,12 +24,12 @@ logger.info(`Watching: ${WATCH_PATH}`);
 logger.info(`Mode: ${DRY_RUN ? 'DRY RUN (no files will be moved)' : 'LIVE'}`);
 
 const watcher = chokidar.watch(WATCH_PATH, {
-  ignoreInitial: true,       // Don't process files already on the drive
+  ignoreInitial: true,
   awaitWriteFinish: {
-    stabilityThreshold: 3000, // Wait 3s after file stops changing (handles slow copies)
+    stabilityThreshold: 3000,
     pollInterval: 500,
   },
-  depth: 0,                  // Only watch root of the drive, not subfolders
+  depth: 0,
 });
 
 watcher.on('all', (event, filePath) => {
@@ -36,13 +38,20 @@ watcher.on('all', (event, filePath) => {
 
 const handleFile = async (filePath) => {
   const filename = path.basename(filePath);
-  
-  if (
-    path.extname(filePath).toLowerCase() !== '.pdf' ||
-    filename.startsWith('._') ||
-    filename.startsWith('.')
-  ) {
+  const ext = path.extname(filePath).toLowerCase();
+
+  if (filename.startsWith('._') || filename.startsWith('.')) {
     logger.info(`Skipping: ${filename}`);
+    return;
+  }
+
+  if (isImageFile(filePath)) {
+    await handleImage(filePath);
+    return;
+  }
+
+  if (ext !== '.pdf') {
+    logger.info(`Skipping unsupported file type: ${filename}`);
     return;
   }
 
@@ -62,6 +71,28 @@ const handleFile = async (filePath) => {
     logger.success(`Moved to: ${finalPath}`);
   } catch (err) {
     logger.error(`Failed to organize ${filename}`, err);
+  }
+};
+
+const handleImage = async (filePath) => {
+  const filename = path.basename(filePath);
+  logger.info(`Transcribing image: ${filename}`);
+
+  try {
+    const transcript = await transcribeImage(filePath);
+    logger.info(`Transcription of "${filename}":\n${transcript}`);
+
+    if (DRY_RUN) {
+      logger.warn(`DRY RUN — transcript not saved`);
+      return;
+    }
+
+    const txtFilename = path.basename(filename, path.extname(filename)) + '.txt';
+    const txtPath = path.join(path.dirname(filePath), txtFilename);
+    fs.writeFileSync(txtPath, transcript, 'utf8');
+    logger.success(`Transcript saved to: ${txtPath}`);
+  } catch (err) {
+    logger.error(`Failed to transcribe ${filename}`, err);
   }
 };
 
