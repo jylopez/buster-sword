@@ -122,11 +122,11 @@ export const moveFile = (filePath, watchPath, folder, newFilename) => {
     const timestamp = Date.now();
     const safeDest = path.join(destDir, `${base}_${timestamp}${ext}`);
     fs.renameSync(filePath, safeDest);
-    fs.chmodSync(safeDest, 0o666);
+    try { fs.chmodSync(safeDest, 0o666); } catch (_) {}
     return safeDest;
   }
 
   fs.renameSync(filePath, destPath);
-  fs.chmodSync(destPath, 0o666);
+  try { fs.chmodSync(destPath, 0o666); } catch (_) {}
   return destPath;
 };
