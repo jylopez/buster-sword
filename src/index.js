@@ -2,7 +2,7 @@ import chokidar from 'chokidar';
 import path from 'path';
 import fs from 'fs';
 import 'dotenv/config';
-import { organizeFile, moveFile } from './organizer.js';
+import { organizeFile, organizeImage, moveFile } from './organizer.js';
 import { transcribeImage, isImageFile } from './transcriber.js';
 import { logger } from './logger.js';
 
@@ -82,17 +82,26 @@ const handleImage = async (filePath) => {
     const transcript = await transcribeImage(filePath);
     logger.info(`Transcription of "${filename}":\n${transcript}`);
 
+    const result = await organizeImage(filePath, WATCH_PATH, transcript);
+    logger.info(`AI decision for "${filename}":`);
+    logger.info(`  → Folder: ${result.folder} ${result.isNewFolder ? '(new)' : '(existing)'}`);
+    logger.info(`  → Rename: ${result.rename}`);
+    logger.info(`  → Reason: ${result.reason}`);
+
     if (DRY_RUN) {
-      logger.warn(`DRY RUN — transcript not saved`);
+      logger.warn(`DRY RUN — file not moved, transcript not saved`);
       return;
     }
 
-    const txtFilename = path.basename(filename, path.extname(filename)) + '.txt';
-    const txtPath = path.join(path.dirname(filePath), txtFilename);
+    const finalPath = moveFile(filePath, WATCH_PATH, result.folder, result.rename);
+    logger.success(`Moved to: ${finalPath}`);
+
+    const txtFilename = path.basename(result.rename, path.extname(result.rename)) + '.txt';
+    const txtPath = path.join(path.dirname(finalPath), txtFilename);
     fs.writeFileSync(txtPath, transcript, 'utf8');
     logger.success(`Transcript saved to: ${txtPath}`);
   } catch (err) {
-    logger.error(`Failed to transcribe ${filename}`, err);
+    logger.error(`Failed to handle image ${filename}`, err);
   }
 };
 

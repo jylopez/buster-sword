@@ -65,6 +65,45 @@ Rules:
   return object;
 };
 
+export const organizeImage = async (filePath, watchPath, transcript) => {
+  const filename = path.basename(filePath);
+  const ext = path.extname(filename);
+
+  const existingFolders = fs.readdirSync(watchPath, { withFileTypes: true })
+    .filter(d => d.isDirectory())
+    .map(d => d.name);
+
+  const prompt = `You are an intelligent document organizer for a home NAS system.
+
+An image file has been added and its text content has been transcribed. Your job is to decide where it belongs.
+
+Filename: ${filename}
+${transcript ? `Transcribed content:\n${transcript.slice(0, 2000)}` : 'No text could be transcribed — use filename only.'}
+
+Existing folders on the drive:
+${existingFolders.length > 0 ? existingFolders.join('\n') : 'No folders yet — you must create one.'}
+
+Rules:
+- Reuse an existing folder if it clearly fits
+- Create a new folder name if none of the existing ones fit
+- Folder names should be short, clear, Title Case (e.g. "Tax Documents", "Receipts", "Manuals")
+- Suggest a cleaner filename if the current one is messy (keep the ${ext} extension)
+- If the content is unclear, use your best guess based on the filename`;
+
+  const { object } = await generateObject({
+    model: gateway('anthropic/claude-haiku-4-5'),
+    schema: z.object({
+      folder: z.string().describe('Folder name to move the file into'),
+      rename: z.string().describe(`New filename including ${ext} extension`),
+      reason: z.string().describe('Brief explanation of why this folder was chosen'),
+      isNewFolder: z.boolean().describe('Whether this is a newly created folder or an existing one'),
+    }),
+    prompt,
+  });
+
+  return object;
+};
+
 export const moveFile = (filePath, watchPath, folder, newFilename) => {
   const destDir = path.join(watchPath, folder);
 
