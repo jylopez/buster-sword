@@ -1,6 +1,7 @@
 import { generateText } from 'ai';
 import { createGateway } from '@ai-sdk/gateway';
 import sharp from 'sharp';
+import heicConvert from 'heic-convert';
 import fs from 'fs';
 import path from 'path';
 
@@ -20,7 +21,7 @@ const toJpegBuffer = async (filePath) => {
   const buffer = fs.readFileSync(filePath);
 
   if (ext === '.heic' || ext === '.heif') {
-    return sharp(buffer).jpeg({ quality: 90 }).toBuffer();
+    return heicConvert({ buffer, format: 'JPEG', quality: 0.9 });
   }
 
   if (ext === '.jpg' || ext === '.jpeg') {
