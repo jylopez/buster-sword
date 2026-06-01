@@ -71,6 +71,7 @@ export const moveFile = (filePath, watchPath, folder, newFilename) => {
   // Create folder if it doesn't exist
   if (!fs.existsSync(destDir)) {
     fs.mkdirSync(destDir, { recursive: true });
+    fs.chmodSync(destDir, 0o777);
   }
 
   const destPath = path.join(destDir, newFilename);
@@ -82,9 +83,11 @@ export const moveFile = (filePath, watchPath, folder, newFilename) => {
     const timestamp = Date.now();
     const safeDest = path.join(destDir, `${base}_${timestamp}${ext}`);
     fs.renameSync(filePath, safeDest);
+    fs.chmodSync(safeDest, 0o666);
     return safeDest;
   }
 
   fs.renameSync(filePath, destPath);
+  fs.chmodSync(destPath, 0o666);
   return destPath;
 };
