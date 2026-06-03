@@ -2,6 +2,7 @@ import { generateText } from 'ai';
 import { createGateway } from '@ai-sdk/gateway';
 import sharp from 'sharp';
 import heicConvert from 'heic-convert';
+import { pdf } from 'pdf-to-img';
 import fs from 'fs';
 import path from 'path';
 
@@ -50,6 +51,46 @@ export const transcribeImage = async (filePath) => {
           {
             type: 'text',
             text: 'Transcribe all handwritten and printed text in this image exactly as written. Preserve the original layout using line breaks. Do not add commentary or explanations — only output the transcribed text.',
+          },
+        ],
+      },
+    ],
+  });
+
+  return text;
+};
+
+// Scanned/image-based PDFs have no embedded text layer, so pdf-parse returns
+// nothing. Rasterize the first few pages and read them with vision instead.
+const MAX_OCR_PAGES = 3;
+
+export const transcribePdf = async (filePath) => {
+  const document = await pdf(filePath, { scale: 2 });
+
+  const images = [];
+  let page = 0;
+  for await (const png of document) {
+    images.push(png.toString('base64'));
+    page += 1;
+    if (page >= MAX_OCR_PAGES) break;
+  }
+
+  if (images.length === 0) return null;
+
+  const { text } = await generateText({
+    model: gateway('anthropic/claude-haiku-4-5'),
+    messages: [
+      {
+        role: 'user',
+        content: [
+          ...images.map((base64) => ({
+            type: 'image',
+            image: base64,
+            mimeType: 'image/png',
+          })),
+          {
+            type: 'text',
+            text: 'Transcribe all handwritten and printed text across these scanned PDF pages exactly as written. Preserve the original layout using line breaks. Do not add commentary or explanations — only output the transcribed text.',
           },
         ],
       },
