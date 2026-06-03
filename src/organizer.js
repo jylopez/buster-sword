@@ -4,20 +4,39 @@ import { z } from 'zod';
 import fs from 'fs';
 import path from 'path';
 import pdfParse from 'pdf-parse';
+import { transcribePdf } from './transcriber.js';
 import { logger } from './logger.js';
 
 const gateway = createGateway({
   apiKey: process.env.VERCEL_AI_GATEWAY_TOKEN,
 });
 
+// Minimum number of extracted characters to trust a PDF's embedded text layer.
+// Below this we treat the PDF as scanned/image-based and fall back to OCR.
+const MIN_TEXT_LAYER_CHARS = 20;
+
 const extractPdfText = async (filePath) => {
+  const filename = path.basename(filePath);
+
+  // First try the fast path: pull the embedded text layer.
   try {
     const buffer = fs.readFileSync(filePath);
     const data = await pdfParse(buffer);
     // Only send the first 2000 characters to keep API costs low
-    return data.text.slice(0, 2000).trim();
+    const text = data.text.slice(0, 2000).trim();
+    if (text.length >= MIN_TEXT_LAYER_CHARS) return text;
   } catch (err) {
-    logger.warn(`Could not extract text from ${path.basename(filePath)}, using filename only`);
+    logger.warn(`Could not parse text layer of ${filename}, falling back to OCR`);
+  }
+
+  // No usable text layer — this is a scanned/image-based PDF. Read it with vision.
+  try {
+    logger.info(`No text layer in ${filename} — running OCR`);
+    const transcript = await transcribePdf(filePath);
+    const text = transcript ? transcript.slice(0, 2000).trim() : '';
+    return text.length > 0 ? text : null;
+  } catch (err) {
+    logger.warn(`Could not OCR ${filename}, using filename only`);
     return null;
   }
 };
